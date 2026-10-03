@@ -1,0 +1,18 @@
+{
+  "mode": "yolo",
+  "runtime": "codex",
+  "resolve_model_ids": "omit",
+  "model_profile": "balanced",
+  "granularity": "coarse",
+  "planning": { "commit_docs": true },
+  "workflow": {
+    "research": true,
+    "plan_check": true,
+    "verifier": true,
+    "auto_advance": true,
+    "compact_content": true,
+    "use_worktrees": false,
+    "response_language": "ru"
+  },
+  "parallelization": { "enabled": false }
+}
