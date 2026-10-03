@@ -1,0 +1,2 @@
+# Phase 2 Context
+Use saved profile criteria; HH live public search may require application/user token or CAPTCHA. Surface this honestly; never bypass. Legacy salary/schedule fields are deprecated; prefer salary_range/work_format and support older response fixtures. Matching is transparent keyword/rule evidence, not an interview probability. Gross/non-monthly/non-RUB/upper-bound-only salary is review-only unless net minimum is established. No salary is eligible per user. Cache real HH responses, do not synthesize vacancies.

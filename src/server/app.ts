@@ -2,6 +2,9 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import { readFile, stat } from 'node:fs/promises';
 import { resolve, extname, sep } from 'node:path';
 import type { Store } from './store.ts';
+import { HHClient, HHError } from './hh.ts';
+import { evaluateVacancy } from '../shared/matching.ts';
+import type { SearchResult, Vacancy } from '../shared/types.ts';
 export class HttpError extends Error { constructor(public status: number, message: string) { super(message); } }
 export function json(res: ServerResponse, value: unknown, status = 200) { res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' }); res.end(JSON.stringify(value)); }
 export async function body(req: IncomingMessage): Promise<unknown> {
@@ -10,7 +13,8 @@ export async function body(req: IncomingMessage): Promise<unknown> {
   for await (const chunk of req) { size += chunk.length; if (size > 65536) throw new HttpError(413, 'Запрос слишком большой.'); chunks.push(Buffer.from(chunk)); }
   try { return JSON.parse(Buffer.concat(chunks).toString('utf8')); } catch { throw new HttpError(400, 'Некорректный JSON.'); }
 }
-export function createHandler(store: Store, options: { origin: string; dist: string }) {
+export function createHandler(store: Store, options: { origin: string; dist: string; hh?: HHClient }) {
+  const hh = options.hh ?? new HHClient();
   return async (req: IncomingMessage, res: ServerResponse) => {
     try {
       if (req.headers.host !== new URL(options.origin).host) throw new HttpError(403, 'Недопустимый адрес сервера.');
@@ -21,6 +25,29 @@ export function createHandler(store: Store, options: { origin: string; dist: str
       res.setHeader('Content-Security-Policy', "default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'");
       const url = new URL(req.url ?? '/', options.origin);
       if (url.pathname === '/api/health' && req.method === 'GET') return json(res, { version: '0.1.0', accountConnected: false, configured: false, mode: 'preview' });
+      if (url.pathname === '/api/search' && req.method === 'GET') {
+        const cached = store.get<SearchResult>('search');
+        return json(res, cached ? { ...cached, items: cached.items.map(item => ({ vacancy: item.vacancy, match: evaluateVacancy(item.vacancy, store.profile()) })) } : null);
+      }
+      if (url.pathname === '/api/search' && req.method === 'POST') {
+        const input = await body(req) as { query?: unknown; page?: unknown };
+        if (!input || typeof input.query !== 'string' || input.page !== undefined && typeof input.page !== 'number') throw new HttpError(400, 'Некорректный запрос поиска.');
+        const result = await hh.search(input.query, input.page as number | undefined);
+        const profile = store.profile();
+        const search: SearchResult = { items: result.items.map(vacancy => ({ vacancy, match: evaluateVacancy(vacancy, profile) })), found: result.found, pages: result.pages, page: result.page, perPage: result.per_page, query: input.query, fetchedAt: new Date().toISOString() };
+        store.set('search', search); return json(res, search);
+      }
+      const detail = url.pathname.match(/^\/api\/vacancies\/(\d{1,20})$/);
+      if (detail && req.method === 'GET') {
+        const vacancy = await hh.vacancy(detail[1]); store.set('vacancy:' + vacancy.id, { vacancy, fetchedAt: new Date().toISOString() });
+        const cached = store.get<SearchResult>('search');
+        if (cached) { cached.items = cached.items.map(item => item.vacancy.id === vacancy.id ? { vacancy, match: evaluateVacancy(vacancy, store.profile()) } : item); store.set('search', cached); }
+        return json(res, { vacancy, match: evaluateVacancy(vacancy, store.profile()) });
+      }
+      if (url.pathname === '/api/cached-vacancies' && req.method === 'GET') {
+        const cached = store.get<SearchResult>('search');
+        return json(res, cached?.items.map(i => i.vacancy) ?? [] as Vacancy[]);
+      }
       if (url.pathname === '/api/profile') {
         if (req.method === 'GET') return json(res, store.profile());
         if (req.method === 'PUT') {
@@ -42,6 +69,6 @@ export function createHandler(store: Store, options: { origin: string; dist: str
       const types: Record<string, string> = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png', '.ico': 'image/x-icon' };
       const bytes = await readFile(file).catch(() => { throw new HttpError(503, 'Сначала выполните сборку: npm run build.'); });
       res.writeHead(200, { 'Content-Type': types[extname(file)] ?? 'application/octet-stream', 'Cache-Control': 'no-cache' }); res.end(req.method === 'HEAD' ? undefined : bytes);
-    } catch (error) { const e = error as Error; if (!res.headersSent) json(res, { error: e.message }, error instanceof HttpError ? error.status : 500); else res.end(); }
+    } catch (error) { const e = error as Error; if (!res.headersSent) json(res, { error: e.message }, error instanceof HttpError ? error.status : error instanceof HHError ? (error.status === 403 ? 403 : error.status === 400 ? 400 : 502) : 500); else res.end(); }
   };
 }

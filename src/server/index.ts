@@ -1,7 +1,10 @@
 import { createServer } from 'node:http';
 import { resolve } from 'node:path';
+import { existsSync } from 'node:fs';
+import { loadEnvFile } from 'node:process';
 import { Store } from './store.ts';
 import { createHandler } from './app.ts';
+if (existsSync('.env')) loadEnvFile('.env');
 const port = Number(process.env.PORT ?? 4310);
 if (!Number.isInteger(port) || port < 1024 || port > 65535) throw new Error('Invalid PORT');
 const store = new Store(resolve(process.env.DATA_DIR ?? 'data', 'agent.sqlite'));

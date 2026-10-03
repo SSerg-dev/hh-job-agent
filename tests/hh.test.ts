@@ -1,0 +1,16 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { HHClient, HHError } from '../src/server/hh.ts';
+test('HH search sends geography and bounded pagination; detail preserves full data', async () => {
+  const calls: string[] = [];
+  const client = new HHClient(async input => { calls.push(String(input)); return Response.json(String(input).includes('?') ? { items: [], found: 0, pages: 1, page: 2, per_page: 20 } : { id: '123', name: 'Senior .NET', area: { id: '2', name: 'SPb' }, description: 'C#' }); });
+  const result = await client.search('.NET OR C#', 2); assert.equal(result.page, 2);
+  const url = new URL(calls[0]); assert.deepEqual(url.searchParams.getAll('area'), ['2', '1']); assert.equal(url.searchParams.get('page'), '2');
+  assert.equal((await client.vacancy('123')).description, 'C#');
+  await assert.rejects(client.search('x', 100), HHError); await assert.rejects(client.vacancy('../token'), HHError);
+});
+test('CAPTCHA stops immediately with an actionable message; malformed success is rejected', async () => {
+  let calls = 0; const client = new HHClient(async () => { calls++; return Response.json({ errors: [{ type: 'captcha_required' }] }, { status: 403 }); });
+  await assert.rejects(client.search('.NET'), /CAPTCHA/); assert.equal(calls, 1);
+  const bad = new HHClient(async () => Response.json({ items: 'bad' })); await assert.rejects(bad.search('.NET'), /некорректную/);
+});

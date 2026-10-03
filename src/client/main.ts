@@ -1,7 +1,9 @@
 import './style.css';
-import type { Health, Profile } from '../shared/types.ts';
+import type { Health, Profile, SearchResult, VacancyResult } from '../shared/types.ts';
+import { plainText } from '../shared/matching.ts';
 const app = document.querySelector<HTMLDivElement>('#app')!;
 let profile: Profile; let health: Health; let page = 'overview';
+let search: SearchResult | null = null; let selected: VacancyResult | null = null; let searching = false; let searchError = ''; let loadedSearch = false;
 const esc = (v: unknown) => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
 const money = (v: number) => new Intl.NumberFormat('ru-RU').format(v);
 const icons: Record<string, string> = { overview: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>', vacancies: '<circle cx="10" cy="10" r="6"/><path d="m15 15 6 6"/>', profile: '<circle cx="12" cy="8" r="4"/><path d="M4 21v-3a8 8 0 0 1 16 0v3"/>', letters: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 6 9 7 9-7"/>', history: '<path d="M3 12a9 9 0 1 0 3-7M3 3v6h6m3-3v6l4 2"/>', settings: '<path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="3"/><circle cx="15" cy="17" r="3"/>' };
@@ -37,9 +39,39 @@ function profileView() {
     } catch (e) { toast((e as Error).message, true); } finally { button.disabled = false; }
   };
 }
+function vacanciesView() {
+  const states = { eligible: 'Соответствует критериям', review: 'Нужна проверка', rejected: 'Не подходит' };
+  const color = { eligible: 'bg-[#e6f2e3] text-[#3c6c36]', review: 'bg-[#f7f0dc] text-[#88702b]', rejected: 'bg-[#f6e7e3] text-[#945a49]' };
+  const card = (r: VacancyResult) => `<button class="card w-full text-left transition hover:border-[#8ca27a] ${selected?.vacancy.id === r.vacancy.id ? 'border-[#6c895c] ring-1 ring-[#6c895c]' : ''}" data-vacancy="${esc(r.vacancy.id)}"><div class="mb-3 flex flex-wrap items-center justify-between gap-2"><span class="text-xs muted">${esc(r.vacancy.employer?.name ?? 'Работодатель')}</span><span class="rounded-lg px-2.5 py-1 text-[11px] ${color[r.match.decision]}">${states[r.match.decision]}</span></div><h2 class="text-lg font-semibold">${esc(r.vacancy.name)}</h2><p class="mt-3 text-sm font-medium">${esc(r.match.salaryLabel)}</p><p class="mt-2 text-xs muted">${esc(r.vacancy.area.name)} · ${esc(r.match.formatLabel)}</p><div class="mt-4 flex flex-wrap gap-1.5">${r.match.matchedSkills.slice(0, 5).map(s => `<span class="pill">${esc(s)}</span>`).join('')}</div><p class="mt-4 text-xs text-[#5c7752]">Полное описание и оценка →</p></button>`;
+  let detail = `<div class="card flex min-h-72 flex-col items-center justify-center text-center">${icon('vacancies', 'mb-4 h-9 w-9 text-[#8fa47b]')}<h2 class="font-semibold">Выбери вакансию</h2><p class="mt-3 text-sm leading-6 muted">Здесь появятся полное описание, совпадения навыков и причины оценки.</p></div>`;
+  if (selected) {
+    const { vacancy: v, match: m } = selected;
+    const link = /^https:\/\/(?:[a-z0-9-]+\.)?hh\.ru\/vacancy\/\d+(?:[/?#]|$)/i.test(v.alternate_url ?? '') ? v.alternate_url : `https://hh.ru/vacancy/${encodeURIComponent(v.id)}`;
+    detail = `<section class="card xl:sticky xl:top-6"><div class="mb-4 flex items-center justify-between gap-3"><span class="rounded-lg px-3 py-1.5 text-xs ${color[m.decision]}">${states[m.decision]}</span><a href="${esc(link)}" target="_blank" rel="noopener noreferrer" class="text-xs font-semibold text-[#44623e]">Открыть HH ↗</a></div><h2 class="text-xl font-semibold">${esc(v.name)}</h2><p class="mt-2 text-sm muted">${esc(v.employer?.name ?? '')} · ${esc(v.area.name)}</p><p class="mt-4 text-sm font-semibold">${esc(m.salaryLabel)}</p><p class="mt-2 text-xs muted">${esc(m.formatLabel)}</p><div class="mt-5 border-t border-[#e0e5dd] pt-5"><h3 class="text-sm font-semibold">Почему такая оценка</h3><ul class="mt-3 space-y-2 text-xs leading-5 text-[#64715f]">${m.reasons.map(s => `<li>• ${esc(s)}</li>`).join('')}</ul></div><div class="mt-5"><h3 class="text-sm font-semibold">Подтверждённые совпадения</h3><div class="mt-3 flex flex-wrap gap-2">${m.matchedSkills.map(s => `<span class="pill">${esc(s)}</span>`).join('') || '<span class="text-xs muted">Не найдены</span>'}</div>${m.gaps.length ? `<p class="mt-4 text-xs leading-5 text-[#8c7133]">Не подтверждено профилем: ${esc(m.gaps.join(', '))}</p>` : ''}<p class="mt-3 text-[11px] muted">${m.coverage === null ? 'Работодатель не перечислил отдельные навыки.' : 'Совпадение перечисленных навыков: ' + m.coverage + '%.'} Это оценка по правилам, не вероятность интервью.</p></div><div class="mt-5 border-t border-[#e0e5dd] pt-5"><h3 class="text-sm font-semibold">Описание</h3><p class="mt-3 max-h-96 overflow-y-auto whitespace-pre-wrap text-xs leading-6 text-[#64715f]">${esc(plainText(v.description ?? 'Полное описание ещё не загружено.'))}</p></div></section>`;
+  }
+  shell(`<form id="search-form" class="card mb-6 flex flex-wrap items-end gap-3"><label class="min-w-0 flex-1 basis-80">Поисковый запрос HH<input name="query" class="mt-2" required maxlength="500" value="${esc(search?.query ?? '.NET OR C# OR Angular OR Vue OR LLM OR RAG')}" placeholder="Например: Senior .NET"></label><button class="btn" type="submit" ${searching ? 'disabled' : ''}>${searching ? 'Ищем в HH…' : 'Найти вакансии'}</button><p class="w-full text-xs leading-5 muted">Санкт-Петербург и Москва · от ${money(profile.minNetSalary)} ₽ на руки · ${profile.allowMissingSalary ? 'без зарплаты тоже рассматриваем' : 'без зарплаты исключаем'}. Для окончательной оценки открой описание.</p></form>${searchError ? `<div role="alert" class="mb-6 rounded-xl border border-[#decba4] bg-[#fbf4e5] p-4 text-sm leading-6 text-[#806837]">${esc(searchError)}</div>` : ''}<div class="mb-5 flex flex-wrap items-center justify-between gap-3 text-xs muted"><span>${search ? `Найдено HH: ${money(search.found)} · показано ${search.items.length} · страница ${search.page + 1} из ${Math.max(1, Math.min(search.pages, 100))}` : 'Результатов пока нет'}</span><span>${search ? 'Поиск: ' + esc(new Date(search.fetchedAt).toLocaleString('ru-RU')) : 'Реальные вакансии из HH API'}</span></div><div class="grid items-start gap-6 xl:grid-cols-2"><div class="space-y-4">${search?.items.length ? search.items.map(card).join('') : `<div class="card py-16 text-center"><h2 class="text-lg font-semibold">${search ? 'По этому запросу вакансий нет' : 'Начни с первого поиска'}</h2><p class="mt-3 text-sm muted">${search ? 'Попробуй изменить запрос.' : 'Агент покажет реальные вакансии и объяснит каждую оценку.'}</p></div>`}${search && search.pages > 1 ? `<div class="flex items-center justify-between gap-3"><button class="secondary" id="prev-page" ${search.page === 0 || searching ? 'disabled' : ''}>← Назад</button><button class="secondary" id="next-page" ${search.page + 1 >= Math.min(search.pages, 100) || searching ? 'disabled' : ''}>Далее →</button></div>` : ''}</div>${detail}</div>`);
+  app.querySelector<HTMLFormElement>('#search-form')!.onsubmit = e => { e.preventDefault(); const query = String(new FormData(e.currentTarget as HTMLFormElement).get('query')); void runSearch(query, 0); };
+  app.querySelector('#prev-page')?.addEventListener('click', () => { if (search) void runSearch(search.query, search.page - 1); });
+  app.querySelector('#next-page')?.addEventListener('click', () => { if (search) void runSearch(search.query, search.page + 1); });
+  app.querySelectorAll<HTMLButtonElement>('[data-vacancy]').forEach(b => b.onclick = async () => {
+    b.disabled = true;
+    try { selected = await api<VacancyResult>('/api/vacancies/' + b.dataset.vacancy); if (search) search.items = search.items.map(r => r.vacancy.id === selected!.vacancy.id ? selected! : r); if (page === 'vacancies') vacanciesView(); }
+    catch (e) { toast((e as Error).message, true); b.disabled = false; }
+  });
+}
+async function runSearch(query: string, targetPage: number) {
+  if (searching) return; searching = true; searchError = ''; vacanciesView();
+  try { search = await api<SearchResult>('/api/search', 'POST', { query, page: targetPage }); selected = null; }
+  catch (e) { searchError = (e as Error).message; }
+  finally { searching = false; if (page === 'vacancies') vacanciesView(); }
+}
 function render() {
   page = location.hash.slice(1) || 'overview'; if (!titles[page]) page = 'overview';
   if (page === 'overview') overview(); else if (page === 'profile') profileView();
+  else if (page === 'vacancies') {
+    vacanciesView();
+    if (!loadedSearch) { loadedSearch = true; void api<SearchResult | null>('/api/search').then(s => { search = s; if (page === 'vacancies') vacanciesView(); }).catch(e => toast((e as Error).message, true)); }
+  }
   else shell(`<section class="card flex min-h-72 flex-col items-center justify-center text-center">${icon(page, 'mb-5 h-10 w-10 text-[#8fa47b]')}<h2 class="text-lg font-semibold">Этот этап ещё в разработке</h2><p class="mt-3 max-w-md text-sm leading-6 muted">Профиль уже можно настроить и сохранить. Поиск HH, письма и отклики будут подключены последовательно.</p><button class="secondary mt-6" id="go-profile">Настроить профиль →</button></section>`);
   app.querySelector<HTMLButtonElement>('#go-profile')?.addEventListener('click', () => { location.hash = 'profile'; });
 }

@@ -14,9 +14,9 @@ Core Value: relevant, truthful, non-duplicate automatic applications under the u
 ### Search and matching
 
 - [ ] **SEARCH-01**: User can search current HH vacancies with pagination and fetch complete descriptions.
-- [ ] **MATCH-01**: Each vacancy displays evidence-based fit, gaps and an explicit eligibility decision.
-- [ ] **MATCH-02**: Office/hybrid outside Saint Petersburg and Tech Lead roles never receive automatic applications.
-- [ ] **MATCH-03**: Net salary below threshold is rejected; missing salary is accepted; gross/ambiguous salary is flagged separately.
+- [x] **MATCH-01**: Each vacancy displays evidence-based fit, gaps and an explicit eligibility decision.
+- [x] **MATCH-02**: Office/hybrid outside Saint Petersburg and Tech Lead roles never receive automatic applications.
+- [x] **MATCH-03**: Net salary below threshold is rejected; missing salary is accepted; gross/ambiguous salary is flagged separately.
 
 ### Letters
 
@@ -52,9 +52,9 @@ Tech Lead jobs, public deployment, other job boards, invented experience, bypass
 | PROFILE-02 | 1 | Complete |
 | UI-01 | 1 | Complete |
 | SEARCH-01 | 2 | Pending |
-| MATCH-01 | 2 | Pending |
-| MATCH-02 | 2 | Pending |
-| MATCH-03 | 2 | Pending |
+| MATCH-01 | 2 | Code/test verified |
+| MATCH-02 | 2 | Code/test verified |
+| MATCH-03 | 2 | Code/test verified |
 | LETTER-01 | 3 | Pending |
 | LETTER-02 | 3 | Pending |
 | AUTH-01 | 4 | Pending |

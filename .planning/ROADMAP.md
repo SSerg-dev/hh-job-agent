@@ -80,7 +80,7 @@
 | Phase | Plans Complete | Status | Completed |
 |---|---|---|---|
 | 1. Interface and profile | 1/1 | Complete    | 2026-10-03 |
-| 2. HH search and matching | 0/1 | Not started | - |
+| 2. HH search and matching | 1/1 code | Needs live API access | - |
 | 3. Personalized cover letters | 0/1 | Not started | - |
 | 4. HH authorization and automatic applications | 0/1 | Not started | - |
 | 5. Scheduling and tracking | 0/1 | Not started | - |
