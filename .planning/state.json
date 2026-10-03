@@ -1,0 +1,38 @@
+{
+  "contract": "1.0.0",
+  "flavor": "core",
+  "milestone": null,
+  "phases": [
+    {
+      "number": "1",
+      "name": "Interface and profile",
+      "status": "complete"
+    },
+    {
+      "number": "2",
+      "name": "HH search and matching",
+      "status": "pending"
+    },
+    {
+      "number": "3",
+      "name": "Personalized cover letters",
+      "status": "pending"
+    },
+    {
+      "number": "4",
+      "name": "HH authorization and automatic applications",
+      "status": "pending"
+    },
+    {
+      "number": "5",
+      "name": "Scheduling and tracking",
+      "status": "pending"
+    }
+  ],
+  "next": {
+    "command": "/gsd:progress --next",
+    "label": "Advance to the next step (plan phase 2)",
+    "reason": "Phase 2 of 5 — needs a plan"
+  },
+  "updated_at": "2026-10-03T10:41:07.782Z"
+}

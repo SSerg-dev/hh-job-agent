@@ -1,0 +1,20 @@
+@import "tailwindcss";
+@theme { --font-sans: "Segoe UI", sans-serif; }
+@layer base {
+  body { @apply m-0 bg-[#f5f6f2] text-[#202c28] antialiased; }
+  button,a,input,textarea,select { @apply focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#34725f]; }
+  button { @apply cursor-pointer disabled:cursor-wait disabled:opacity-50; }
+  input,textarea,select { @apply w-full rounded-xl border border-[#dce2db] bg-white px-4 py-3 text-sm; }
+  label { @apply block text-sm font-medium; }
+  textarea { @apply resize-y; }
+}
+@layer components {
+  .card { @apply min-w-0 rounded-2xl border border-[#e0e5dd] bg-white p-6 shadow-[0_2px_6px_rgba(30,50,40,0.025)]; }
+  .btn { @apply inline-flex items-center justify-center gap-2 rounded-xl bg-[#234f41] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#173c31]; }
+  .secondary { @apply inline-flex items-center justify-center rounded-xl border border-[#d5ddd3] bg-white px-4 py-2.5 text-sm font-medium transition hover:bg-[#edf1e9]; }
+  .muted { @apply text-[#718077]; }
+  .pill { @apply inline-flex items-center rounded-lg bg-[#edf3e9] px-3 py-1.5 text-xs font-medium text-[#44623e]; }
+  .nav-button { @apply flex min-w-0 w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-sm break-words transition hover:bg-white/10; overflow-wrap: anywhere; }
+  .nav-button svg { flex-shrink: 0; }
+  .nav-active { @apply bg-white/15 text-white; }
+}

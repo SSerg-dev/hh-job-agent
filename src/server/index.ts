@@ -1,0 +1,11 @@
+import { createServer } from 'node:http';
+import { resolve } from 'node:path';
+import { Store } from './store.ts';
+import { createHandler } from './app.ts';
+const port = Number(process.env.PORT ?? 4310);
+if (!Number.isInteger(port) || port < 1024 || port > 65535) throw new Error('Invalid PORT');
+const store = new Store(resolve(process.env.DATA_DIR ?? 'data', 'agent.sqlite'));
+const origin = `http://127.0.0.1:${port}`;
+const server = createServer(createHandler(store, { origin, dist: resolve('dist') }));
+server.listen(port, '127.0.0.1', () => console.log(`HH Job Agent: ${origin}`));
+for (const signal of ['SIGINT', 'SIGTERM'] as const) process.on(signal, () => server.close(() => { store.close(); process.exit(0); }));
