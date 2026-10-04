@@ -1,9 +1,10 @@
 import './style.css';
+import { manualView } from './manual-view.ts';
 import type { Health, Profile, SearchResult, VacancyResult } from '../shared/types.ts';
 import { plainText } from '../shared/matching.ts';
 const app = document.querySelector<HTMLDivElement>('#app')!;
 let profile: Profile; let health: Health; let page = 'overview';
-let search: SearchResult | null = null; let selected: VacancyResult | null = null; let searching = false; let searchError = ''; let loadedSearch = false;
+let search: SearchResult | null = null; let selected: VacancyResult | null = null; let searching = false; let searchError = '';
 const esc = (v: unknown) => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
 const money = (v: number) => new Intl.NumberFormat('ru-RU').format(v);
 const icons: Record<string, string> = { overview: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>', vacancies: '<circle cx="10" cy="10" r="6"/><path d="m15 15 6 6"/>', profile: '<circle cx="12" cy="8" r="4"/><path d="M4 21v-3a8 8 0 0 1 16 0v3"/>', letters: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 6 9 7 9-7"/>', history: '<path d="M3 12a9 9 0 1 0 3-7M3 3v6h6m3-3v6l4 2"/>', settings: '<path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="3"/><circle cx="15" cy="17" r="3"/>' };
@@ -69,9 +70,9 @@ function render() {
   page = location.hash.slice(1) || 'overview'; if (!titles[page]) page = 'overview';
   if (page === 'overview') overview(); else if (page === 'profile') profileView();
   else if (page === 'vacancies') {
-    vacanciesView();
-    if (!loadedSearch) { loadedSearch = true; void api<SearchResult | null>('/api/search').then(s => { search = s; if (page === 'vacancies') vacanciesView(); }).catch(e => toast((e as Error).message, true)); }
+    void manualView(shell);
   }
+  else if (page === 'letters') void manualView(shell, true);
   else shell(`<section class="card flex min-h-72 flex-col items-center justify-center text-center">${icon(page, 'mb-5 h-10 w-10 text-[#8fa47b]')}<h2 class="text-lg font-semibold">Этот этап ещё в разработке</h2><p class="mt-3 max-w-md text-sm leading-6 muted">Профиль уже можно настроить и сохранить. Поиск HH, письма и отклики будут подключены последовательно.</p><button class="secondary mt-6" id="go-profile">Настроить профиль →</button></section>`);
   app.querySelector<HTMLButtonElement>('#go-profile')?.addEventListener('click', () => { location.hash = 'profile'; });
 }

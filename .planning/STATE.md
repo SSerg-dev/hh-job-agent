@@ -17,6 +17,9 @@ progress:
 
 # Project State
 
+## Quick Tasks Completed
+2026-10-04: manual vacancies and factual editable letters (.planning/quick/20261004-manual-vacancies). 13 tests, typecheck/build pass. User-approved manual workflow replaces current UI API search. HH applicant API discontinuation disclosed by registration form; OAuth roadmap requires reassessment before execution.
+
 ## Project Reference
 
 See .planning/PROJECT.md (updated 2026-10-03).

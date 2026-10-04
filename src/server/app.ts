@@ -4,6 +4,7 @@ import { resolve, extname, sep } from 'node:path';
 import type { Store } from './store.ts';
 import { HHClient, HHError } from './hh.ts';
 import { evaluateVacancy } from '../shared/matching.ts';
+import { createManual, type ManualEntry } from '../shared/manual.ts';
 import type { SearchResult, Vacancy } from '../shared/types.ts';
 export class HttpError extends Error { constructor(public status: number, message: string) { super(message); } }
 export function json(res: ServerResponse, value: unknown, status = 200) { res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' }); res.end(JSON.stringify(value)); }
@@ -24,6 +25,21 @@ export function createHandler(store: Store, options: { origin: string; dist: str
       res.setHeader('Referrer-Policy', 'no-referrer');
       res.setHeader('Content-Security-Policy', "default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'");
       const url = new URL(req.url ?? '/', options.origin);
+      if (url.pathname === '/api/manual' && req.method === 'GET') return json(res, (store.get<ManualEntry[]>('manual') ?? []).map(entry => ({ ...entry, match: evaluateVacancy(entry.vacancy, store.profile()) })));
+      if (url.pathname === '/api/manual' && req.method === 'POST') {
+        const input = await body(req); let entry: ManualEntry;
+        try { entry = createManual(input, store.profile()); } catch (e) { throw new HttpError(400, (e as Error).message); }
+        const entries = store.get<ManualEntry[]>('manual') ?? [];
+        if (entries.length >= 100) throw new HttpError(400, 'Достигнут лимит 100 ручных вакансий.');
+        store.set('manual', [entry, ...entries]); return json(res, { ...entry, match: evaluateVacancy(entry.vacancy, store.profile()) }, 201);
+      }
+      if (url.pathname === '/api/manual' && req.method === 'PUT') {
+        const input = await body(req) as { id?: unknown; letter?: unknown };
+        if (!input || typeof input.id !== 'string' || typeof input.letter !== 'string' || input.letter.length > 20000 || !input.letter.trim()) throw new HttpError(400, 'Проверьте письмо.');
+        const entries = store.get<ManualEntry[]>('manual') ?? []; const entry = entries.find(e => e.id === input.id);
+        if (!entry) throw new HttpError(404, 'Вакансия не найдена.');
+        entry.letter = input.letter; store.set('manual', entries); return json(res, entry);
+      }
       if (url.pathname === '/api/health' && req.method === 'GET') return json(res, { version: '0.1.0', accountConnected: false, configured: false, mode: 'preview' });
       if (url.pathname === '/api/search' && req.method === 'GET') {
         const cached = store.get<SearchResult>('search');

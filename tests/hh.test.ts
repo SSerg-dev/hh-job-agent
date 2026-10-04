@@ -9,6 +9,14 @@ test('HH search sends geography and bounded pagination; detail preserves full da
   assert.equal((await client.vacancy('123')).description, 'C#');
   await assert.rejects(client.search('x', 100), HHError); await assert.rejects(client.vacancy('../token'), HHError);
 });
+test('generic forbidden does not claim authentication is required; OAuth error is distinguished', async () => {
+  let calls = 0;
+  const forbidden = new HHClient(async () => { calls++; return Response.json({ errors: [{ type: 'forbidden' }], request_id: 'request-123' }, { status: 403 }); });
+  await assert.rejects(forbidden.search('.NET'), error => error instanceof HHError && error.kind === 'forbidden' && error.message.includes('Причина не уточнена') && error.message.includes('request-123') && !error.message.includes('понадобится авторизация'));
+  assert.equal(calls, 1);
+  const oauth = new HHClient(async () => Response.json({ errors: [{ type: 'oauth', value: 'bad_authorization' }] }, { status: 403 }));
+  await assert.rejects(oauth.search('.NET'), /отклонил авторизацию API/);
+});
 test('CAPTCHA stops immediately with an actionable message; malformed success is rejected', async () => {
   let calls = 0; const client = new HHClient(async () => { calls++; return Response.json({ errors: [{ type: 'captcha_required' }] }, { status: 403 }); });
   await assert.rejects(client.search('.NET'), /CAPTCHA/); assert.equal(calls, 1);
