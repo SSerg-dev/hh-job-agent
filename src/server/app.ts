@@ -3,6 +3,7 @@ import { readFile, stat } from 'node:fs/promises';
 import { resolve, extname, sep } from 'node:path';
 import type { Store } from './store.ts';
 import { HHClient, HHError } from './hh.ts';
+import { HHPageImporter } from './hh-import.ts';
 import { evaluateVacancy } from '../shared/matching.ts';
 import { createManual, type ManualEntry } from '../shared/manual.ts';
 import type { SearchResult, Vacancy } from '../shared/types.ts';
@@ -14,8 +15,9 @@ export async function body(req: IncomingMessage): Promise<unknown> {
   for await (const chunk of req) { size += chunk.length; if (size > 65536) throw new HttpError(413, 'Запрос слишком большой.'); chunks.push(Buffer.from(chunk)); }
   try { return JSON.parse(Buffer.concat(chunks).toString('utf8')); } catch { throw new HttpError(400, 'Некорректный JSON.'); }
 }
-export function createHandler(store: Store, options: { origin: string; dist: string; hh?: HHClient }) {
+export function createHandler(store: Store, options: { origin: string; dist: string; hh?: HHClient; importer?: HHPageImporter }) {
   const hh = options.hh ?? new HHClient();
+  const importer = options.importer ?? new HHPageImporter();
   return async (req: IncomingMessage, res: ServerResponse) => {
     try {
       if (req.headers.host !== new URL(options.origin).host) throw new HttpError(403, 'Недопустимый адрес сервера.');
@@ -25,6 +27,10 @@ export function createHandler(store: Store, options: { origin: string; dist: str
       res.setHeader('Referrer-Policy', 'no-referrer');
       res.setHeader('Content-Security-Policy', "default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'");
       const url = new URL(req.url ?? '/', options.origin);
+      if (url.pathname === '/api/manual/import' && req.method === 'POST') {
+        const input = await body(req) as { url?: unknown } | null;
+        return json(res, await importer.load(input?.url));
+      }
       if (url.pathname === '/api/manual' && req.method === 'GET') return json(res, (store.get<ManualEntry[]>('manual') ?? []).map(entry => ({ ...entry, match: evaluateVacancy(entry.vacancy, store.profile()) })));
       if (url.pathname === '/api/manual' && req.method === 'POST') {
         const input = await body(req); let entry: ManualEntry;
