@@ -34,3 +34,25 @@ test('manual input rejects invalid salary and unsupported fields; Moscow office 
   assert.throws(() => createManual({ ...input, format: 'invented' }, defaultProfile));
   const e = createManual({ ...input, city: '1', format: 'ON_SITE' }, defaultProfile); assert.equal(evaluateVacancy(e.vacancy, defaultProfile).decision, 'rejected');
 });
+test('manual deletion persists and leaves other vacancies and profile intact', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'hh-delete-')); const file = join(dir, 'db.sqlite'); const store = new Store(file);
+  const server = createServer(); await new Promise<void>(r => server.listen(0, '127.0.0.1', r));
+  const origin = 'http://127.0.0.1:' + (server.address() as { port: number }).port; server.on('request', createHandler(store, { origin, dist: dir }));
+  try {
+    const headers = { Origin: origin, 'Content-Type': 'application/json' };
+    const send = (method: string, value: unknown, originHeader = origin) => fetch(origin + '/api/manual', { method, headers: { ...headers, Origin: originHeader }, body: JSON.stringify(value) });
+    const first = await (await send('POST', input)).json();
+    const second = await (await send('POST', { ...input, name: 'Second vacancy' })).json();
+    const profile = store.profile();
+    assert.equal((await send('DELETE', { id: first.id }, 'https://foreign.example')).status, 403);
+    for (const invalid of [null, {}, { id: '' }, { id: 123 }]) assert.equal((await send('DELETE', invalid)).status, 400);
+    assert.equal((await send('DELETE', { id: 'missing' })).status, 404);
+    assert.equal((await (await fetch(origin + '/api/manual')).json()).length, 2);
+    const deleted = await send('DELETE', { id: first.id }); assert.equal(deleted.status, 200); assert.deepEqual(await deleted.json(), { deleted: first.id });
+    assert.equal((await send('PUT', { id: first.id, letter: 'Deleted letter' })).status, 404);
+    assert.equal((await send('DELETE', { id: first.id })).status, 404);
+    const list = await (await fetch(origin + '/api/manual')).json(); assert.equal(list.length, 1); assert.equal(list[0].id, second.id); assert.equal(list[0].letter, second.letter);
+    assert.deepEqual(store.profile(), profile);
+    store.close(); const reopened = new Store(file); assert.deepEqual(reopened.get<{ id: string }[]>('manual')!.map(e => e.id), [second.id]); reopened.close();
+  } finally { await new Promise<void>(r => server.close(() => r())); if (store.db.isOpen) store.close(); rmSync(dir, { recursive: true, force: true }); }
+});

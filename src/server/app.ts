@@ -40,6 +40,14 @@ export function createHandler(store: Store, options: { origin: string; dist: str
         if (!entry) throw new HttpError(404, 'Вакансия не найдена.');
         entry.letter = input.letter; store.set('manual', entries); return json(res, entry);
       }
+      if (url.pathname === '/api/manual' && req.method === 'DELETE') {
+        const input = await body(req) as { id?: unknown } | null;
+        if (!input || typeof input.id !== 'string' || !input.id.trim()) throw new HttpError(400, 'Укажите вакансию для удаления.');
+        const entries = store.get<ManualEntry[]>('manual') ?? [];
+        if (!entries.some(entry => entry.id === input.id)) throw new HttpError(404, 'Вакансия не найдена.');
+        store.set('manual', entries.filter(entry => entry.id !== input.id));
+        return json(res, { deleted: input.id });
+      }
       if (url.pathname === '/api/health' && req.method === 'GET') return json(res, { version: '0.1.0', accountConnected: false, configured: false, mode: 'preview' });
       if (url.pathname === '/api/search' && req.method === 'GET') {
         const cached = store.get<SearchResult>('search');
