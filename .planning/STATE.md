@@ -18,6 +18,7 @@ progress:
 # Project State
 
 ## Quick Tasks Completed
+2026-10-05: импорт вакансии по HTTPS-ссылке HH заполняет ручную форму через публичную HTML-страницу, без HH API. 19 тестов, typecheck/build и live browser import 137302282 прошли; неверная ссылка сохраняет ввод. Артефакты: .planning/quick/261005-i6o-import-hh-vacancy-url-into-manual-form.
 2026-10-05: добавлены удаление ручной вакансии с письмом и очистка формы; 14 тестов, typecheck/build прошли, интерфейс проверен. Артефакты: .planning/quick/261005-i2c-delete-manual-vacancies-and-reset-vacanc.
 2026-10-05: проверена реальная вакансия Napoleon IT 137302282; карточка и адаптированный черновик сохранены, API и браузер подтверждают результат. Для готового письма ожидается пример личного AI-внедрения. Найдено ограничение matcher: альтернативные языки и ненормализованные навыки вызывают «Нужна проверка». Код не менялся, откликов нет. Артефакты: .planning/quick/261005-hnb-review-napoleon-it-vacancy-137302282-and.
 2026-10-04: manual vacancies and factual editable letters (.planning/quick/20261004-manual-vacancies). 13 tests, typecheck/build pass. User-approved manual workflow replaces current UI API search. HH applicant API discontinuation disclosed by registration form; OAuth roadmap requires reassessment before execution.
@@ -44,6 +45,8 @@ GSD Core 1.15.0 installed locally. Native typed dispatch is unavailable; no clai
 Live application verification requires HH application OAuth credentials, user login and existing HH resume selection. Do not request secrets in chat. Gross salary cannot be assumed to equal net salary.
 
 ## Session Continuity
+
+2026-10-05 последнее: импорт по ссылке готов и live-проверен. Сервер с сетевым доступом — сессия 9959, localhost:4310. Форма заполнена Napoleon IT, ещё не сохранена. Публичный HTML-парсер HH-Lux-InitialState требует актуализации при изменении HH. API/OAuth не используется для импорта. Лимиты проверить перед следующим существенным шагом.
 
 2026-10-05 последнее: функция удаления и очистки готова, сервер перезапущен (сессия 42377). В подборке кнопка «Удалить вакансию», в форме — «Очистить форму». Карточка Napoleon IT сохранена для пользователя. Перед работой проверить лимиты, резерв 30%.
 
