@@ -1,7 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import { evaluateVacancy } from './matching.ts';
 import type { Profile, Vacancy, Match } from './types.ts';
-export interface ManualEntry { id: string; vacancy: Vacancy; letter: string; createdAt: string }
+import type { LetterInfo } from './letter.ts';
+export interface ManualEntry { id: string; vacancy: Vacancy; letter: string; letterInfo?: LetterInfo; createdAt: string }
 export interface ManualResult extends ManualEntry { match: Match }
 export function createManual(value: unknown, profile: Profile): ManualEntry {
   if (!value || typeof value !== 'object') throw new Error('Заполните вакансию.');

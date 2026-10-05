@@ -21,7 +21,15 @@ test('manual API persists vacancy and edited letter after database reopen; reeva
   const origin = 'http://127.0.0.1:' + (server.address() as { port: number }).port; server.on('request', createHandler(store, { origin, dist: dir }));
   try {
     const headers = { Origin: origin, 'Content-Type': 'application/json' };
+    store.set('candidate_sources', [{ id: 'resume', filename: 'resume.pdf', sha256: 'hash', text: 'Confirmed backend experience' }]);
+    store.set('candidate_letter_facts', [{ id: 'backend', sourceId: 'resume', sourceHash: 'hash', quote: 'Confirmed backend experience', paragraph: 'Подтверждённый опыт backend.', topics: [], always: true }]);
     const response = await fetch(origin + '/api/manual', { method: 'POST', headers, body: JSON.stringify(input) }); assert.equal(response.status, 201); const entry = await response.json();
+    assert.ok(entry.letter.includes('Подтверждённый опыт backend.')); assert.deepEqual(entry.letterInfo.sources, ['resume.pdf']);
+    assert.equal((await fetch(origin + '/api/manual/letter', { method: 'POST', headers, body: JSON.stringify({ id: 'missing' }) })).status, 404);
+    await fetch(origin + '/api/manual', { method: 'PUT', headers, body: JSON.stringify({ id: entry.id, letter: 'Old draft' }) });
+    const regenerated = await fetch(origin + '/api/manual/letter', { method: 'POST', headers, body: JSON.stringify({ id: entry.id }) });
+    assert.equal(regenerated.status, 200); assert.equal((await regenerated.json()).letter, entry.letter);
+    assert.equal(store.get<{letter:string}[]>('manual')![0].letter, entry.letter);
     const edited = 'Мой исправленный черновик'; assert.equal((await fetch(origin + '/api/manual', { method: 'PUT', headers, body: JSON.stringify({ id: entry.id, letter: edited }) })).status, 200);
     store.saveProfile({ ...defaultProfile, minNetSalary: 250000 }); const list = await (await fetch(origin + '/api/manual')).json(); assert.equal(list[0].match.decision, 'review'); assert.equal(list[0].letter, edited);
     assert.equal((await fetch(origin + '/api/manual', { method: 'POST', headers: { ...headers, Origin: 'https://foreign.example' }, body: JSON.stringify(input) })).status, 403);

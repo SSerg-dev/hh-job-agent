@@ -6,6 +6,7 @@ import { HHClient, HHError } from './hh.ts';
 import { HHPageImporter } from './hh-import.ts';
 import { evaluateVacancy } from '../shared/matching.ts';
 import { createManual, type ManualEntry } from '../shared/manual.ts';
+import { draftLetter, type CandidateSource, type CandidateFact } from '../shared/letter.ts';
 import type { SearchResult, Vacancy } from '../shared/types.ts';
 export class HttpError extends Error { constructor(public status: number, message: string) { super(message); } }
 export function json(res: ServerResponse, value: unknown, status = 200) { res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' }); res.end(JSON.stringify(value)); }
@@ -18,6 +19,7 @@ export async function body(req: IncomingMessage): Promise<unknown> {
 export function createHandler(store: Store, options: { origin: string; dist: string; hh?: HHClient; importer?: HHPageImporter }) {
   const hh = options.hh ?? new HHClient();
   const importer = options.importer ?? new HHPageImporter();
+  const letterFor = (vacancy: Vacancy) => draftLetter(vacancy, store.profile(), store.get<CandidateSource[]>('candidate_sources') ?? [], store.get<CandidateFact[]>('candidate_letter_facts') ?? []);
   return async (req: IncomingMessage, res: ServerResponse) => {
     try {
       if (req.headers.host !== new URL(options.origin).host) throw new HttpError(403, 'Недопустимый адрес сервера.');
@@ -31,10 +33,20 @@ export function createHandler(store: Store, options: { origin: string; dist: str
         const input = await body(req) as { url?: unknown } | null;
         return json(res, await importer.load(input?.url));
       }
+      if (url.pathname === '/api/manual/letter' && req.method === 'POST') {
+        const input = await body(req) as { id?: unknown } | null;
+        if (!input || typeof input.id !== 'string') throw new HttpError(400, 'Укажите вакансию.');
+        const entries = store.get<ManualEntry[]>('manual') ?? [];
+        const entry = entries.find(e => e.id === input.id);
+        if (!entry) throw new HttpError(404, 'Вакансия не найдена.');
+        Object.assign(entry, letterFor(entry.vacancy)); store.set('manual', entries);
+        return json(res, { letter: entry.letter, letterInfo: entry.letterInfo });
+      }
       if (url.pathname === '/api/manual' && req.method === 'GET') return json(res, (store.get<ManualEntry[]>('manual') ?? []).map(entry => ({ ...entry, match: evaluateVacancy(entry.vacancy, store.profile()) })));
       if (url.pathname === '/api/manual' && req.method === 'POST') {
         const input = await body(req); let entry: ManualEntry;
         try { entry = createManual(input, store.profile()); } catch (e) { throw new HttpError(400, (e as Error).message); }
+        Object.assign(entry, letterFor(entry.vacancy));
         const entries = store.get<ManualEntry[]>('manual') ?? [];
         if (entries.length >= 100) throw new HttpError(400, 'Достигнут лимит 100 ручных вакансий.');
         store.set('manual', [entry, ...entries]); return json(res, { ...entry, match: evaluateVacancy(entry.vacancy, store.profile()) }, 201);
