@@ -31,21 +31,22 @@ export function parseVacancyPage(html: string, source: { id: string; url: string
   if (v.status?.archived || v.status?.disabled) throw new HHError(410, 'archived', 'Вакансия архивная или недоступна.');
   const warnings: string[] = [];
   const formats = Array.isArray(v.workFormats) ? v.workFormats : [];
-  const format = formats.length === 1 && ['REMOTE', 'HYBRID', 'ON_SITE'].includes(formats[0]) ? formats[0] : 'unknown';
-  if (format === 'unknown') warnings.push('Формат работы не определён однозначно — выберите вручную.');
-  const city = ['1', '2'].includes(String(v.area?.id)) ? String(v.area.id) : 'other';
-  if (city === 'other') warnings.push(`Город: ${typeof v.area?.name === 'string' ? v.area.name : 'не указан'}. Он вне текущих критериев.`);
+  const format = formats.length === 1 && ['REMOTE', 'HYBRID', 'ON_SITE'].includes(formats[0]) ? formats[0] : '';
+  if (!format) warnings.push('Формат работы не определён однозначно — поле оставлено пустым.');
+  const city = ['1', '2'].includes(String(v.area?.id)) ? String(v.area.id) : v.area?.id && typeof v.area?.name === 'string' && v.area.name.trim() ? 'other' : '';
+  if (city === 'other') warnings.push(`Город: ${v.area.name}. Он вне текущих критериев.`);
+  if (!city) warnings.push('Город не указан — поле оставлено пустым.');
   const compensation = v.compensation;
-  let salary = '', tax = 'unknown';
+  let salary = '', tax = '';
   if (!compensation || compensation.noCompensation) warnings.push('Зарплата не указана в объявлении.');
   else {
     const monthly = (compensation.mode ?? compensation.compensationMode) === 'MONTH';
     if (monthly && compensation.currencyCode === 'RUR' && Number.isSafeInteger(compensation.from) && compensation.from > 0 && compensation.from <= 10000000) {
       salary = String(compensation.from);
-      tax = typeof compensation.gross === 'boolean' ? (compensation.gross ? 'gross' : 'net') : 'unknown';
+      tax = typeof compensation.gross === 'boolean' ? (compensation.gross ? 'gross' : 'net') : '';
       if (compensation.to) warnings.push(`Верхняя граница зарплаты: ${compensation.to} ₽. В форме указана только нижняя граница.`);
-      if (tax === 'unknown') warnings.push('Не уточнено, указана зарплата до налогов или на руки.');
-    } else warnings.push('Зарплата указана, но нижняя граница в рублях за месяц не подтверждена. Проверьте её на странице HH и заполните вручную.');
+      if (!tax) warnings.push('Не уточнено, указана зарплата до налогов или на руки — поле оставлено пустым.');
+    } else warnings.push('Зарплата указана, но нижняя граница в рублях за месяц не подтверждена — поле оставлено пустым.');
   }
   const description = `Источник: ${source.url}\n\n${plain(v.description)}`;
   const skills = Array.isArray(v.keySkills) ? v.keySkills.filter((s: unknown) => typeof s === 'string').join(', ') : '';

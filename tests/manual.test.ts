@@ -34,6 +34,12 @@ test('manual input rejects invalid salary and unsupported fields; Moscow office 
   assert.throws(() => createManual({ ...input, format: 'invented' }, defaultProfile));
   const e = createManual({ ...input, city: '1', format: 'ON_SITE' }, defaultProfile); assert.equal(evaluateVacancy(e.vacancy, defaultProfile).decision, 'rejected');
 });
+test('optional unknown conditions remain absent and require review without guessing geography or taxes', () => {
+  const entry = createManual({ ...input, city: '', format: '', tax: '', salary: '', employer: '', skills: '' }, defaultProfile);
+  assert.equal(entry.vacancy.area.id, 'unknown'); assert.deepEqual(entry.vacancy.work_format, []); assert.equal(entry.vacancy.salary, null);
+  const match = evaluateVacancy(entry.vacancy, defaultProfile); assert.equal(match.decision, 'review'); assert.ok(match.reasons.some(reason => reason.includes('Город не указан')));
+  const unknownTax = createManual({ ...input, tax: '' }, defaultProfile); assert.equal(unknownTax.vacancy.salary?.gross, undefined);
+});
 test('manual deletion persists and leaves other vacancies and profile intact', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'hh-delete-')); const file = join(dir, 'db.sqlite'); const store = new Store(file);
   const server = createServer(); await new Promise<void>(r => server.listen(0, '127.0.0.1', r));

@@ -46,7 +46,8 @@ export function evaluateVacancy(v: Vacancy, profile: Profile): Match {
   if (!formats.length && v.schedule?.id === 'remote') formats = ['REMOTE'];
   const map: Record<string, 'remote' | 'hybrid' | 'office'> = { REMOTE: 'remote', HYBRID: 'hybrid', ON_SITE: 'office' };
   const labels: Record<string, string> = { REMOTE: 'Удалёнка', HYBRID: 'Гибрид', ON_SITE: 'Офис' };
-  if (!['1', '2'].includes(v.area.id)) reject('География вне Москвы и Санкт-Петербурга.');
+  if (!v.area.id || v.area.id === 'unknown') review('Город не указан; географию нужно проверить.');
+  else if (!['1', '2'].includes(v.area.id)) reject('География вне Москвы и Санкт-Петербурга.');
   else if (!formats.length || formats.some(f => !map[f])) review('Формат работы не определён однозначно.');
   else {
     const allowed = v.area.id === '1' ? profile.locations.moscow : profile.locations.spb;
