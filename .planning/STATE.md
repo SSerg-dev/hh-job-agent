@@ -18,6 +18,7 @@ progress:
 # Project State
 
 ## Quick Tasks Completed
+2026-10-05: пользователь выбрал замену всех полей при загрузке новой ссылки. Неизвестные условия пустые; старые зарплата/налоги очищаются. 21 тест, typecheck/build, live замена заполненной формы прошли. Артефакты: .planning/quick/261005-ig0-replace-all-vacancy-form-fields-and-leav.
 2026-10-05: импорт вакансии по HTTPS-ссылке HH заполняет ручную форму через публичную HTML-страницу, без HH API. 19 тестов, typecheck/build и live browser import 137302282 прошли; неверная ссылка сохраняет ввод. Артефакты: .planning/quick/261005-i6o-import-hh-vacancy-url-into-manual-form.
 2026-10-05: добавлены удаление ручной вакансии с письмом и очистка формы; 14 тестов, typecheck/build прошли, интерфейс проверен. Артефакты: .planning/quick/261005-i2c-delete-manual-vacancies-and-reset-vacanc.
 2026-10-05: проверена реальная вакансия Napoleon IT 137302282; карточка и адаптированный черновик сохранены, API и браузер подтверждают результат. Для готового письма ожидается пример личного AI-внедрения. Найдено ограничение matcher: альтернативные языки и ненормализованные навыки вызывают «Нужна проверка». Код не менялся, откликов нет. Артефакты: .planning/quick/261005-hnb-review-napoleon-it-vacancy-137302282-and.
@@ -45,6 +46,8 @@ GSD Core 1.15.0 installed locally. Native typed dispatch is unavailable; no clai
 Live application verification requires HH application OAuth credentials, user login and existing HH resume selection. Do not request secrets in chat. Gross salary cannot be assumed to equal net salary.
 
 ## Session Continuity
+
+2026-10-05 последнее: импорт заменяет все поля, отсутствующие оставляет пустыми. Сервер с сетью — сессия 4421; localhost:4310. Live-проверка замены и очистки старых зарплаты/налогов успешна. Сохранение отдельное. Начальное чтение лимитов: остаются 67% пятичасового и 80% недельного окна.
 
 2026-10-05 последнее: импорт по ссылке готов и live-проверен. Сервер с сетевым доступом — сессия 9959, localhost:4310. Форма заполнена Napoleon IT, ещё не сохранена. Публичный HTML-парсер HH-Lux-InitialState требует актуализации при изменении HH. API/OAuth не используется для импорта. Лимиты проверить перед следующим существенным шагом.
 
