@@ -20,7 +20,7 @@ export interface Vacancy {
   archived?: boolean; has_test?: boolean; published_at?: string;
 }
 export interface Match {
-  decision: 'eligible' | 'review' | 'rejected'; reasons: string[]; matchedSkills: string[]; gaps: string[];
+  decision: 'eligible' | 'review' | 'rejected'; reasons: string[]; matchedSkills: string[]; gaps: string[]; optionalGaps: string[];
   coverage: number | null; salaryLabel: string; formatLabel: string; fullDetails: boolean;
 }
 export interface VacancyResult { vacancy: Vacancy; match: Match }

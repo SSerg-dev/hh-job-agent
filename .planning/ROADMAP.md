@@ -37,6 +37,8 @@
 
 ### Phase 3: Personalized cover letters
 
+**Implementation note (2026-10-06):** Manual document-grounded letters, editing, persistence and regeneration safety are implemented through quick tasks. Formal phase planning/acceptance remains pending; do not rerun completed quick work blindly.
+
 **Goal:** User can inspect and edit truthful letters tailored to a selected vacancy.
 **Mode:** mvp
 **Depends on:** Phase 2
@@ -49,6 +51,8 @@
 **Plans:** 1 plan
 
 ### Phase 4: HH authorization and automatic applications
+
+**Gate (2026-10-06):** Reassess official applicant integration availability and scope before execution. Recorded registration-form evidence reported applicant API discontinuation. Local-only development is approved; cloud/Vercel work is deferred.
 
 **Goal:** Configured account can send eligible applications reliably.
 **Mode:** mvp
@@ -81,6 +85,6 @@
 |---|---|---|---|
 | 1. Interface and profile | 1/1 | Complete    | 2026-10-03 |
 | 2. HH search and matching | 1/1 code | Needs live API access | - |
-| 3. Personalized cover letters | 0/1 | Not started | - |
+| 3. Personalized cover letters | 0/1 formal | Partial via quick tasks; acceptance pending | - |
 | 4. HH authorization and automatic applications | 0/1 | Not started | - |
 | 5. Scheduling and tracking | 0/1 | Not started | - |

@@ -55,8 +55,8 @@ Tech Lead jobs, public deployment, other job boards, invented experience, bypass
 | MATCH-01 | 2 | Code/test verified |
 | MATCH-02 | 2 | Code/test verified |
 | MATCH-03 | 2 | Code/test verified |
-| LETTER-01 | 3 | Pending |
-| LETTER-02 | 3 | Pending |
+| LETTER-01 | 3 | Implemented in manual mode; formal acceptance pending |
+| LETTER-02 | 3 | Behavior tests cover factual grounding; formal acceptance pending |
 | AUTH-01 | 4 | Pending |
 | APPLY-01 | 4 | Pending |
 | APPLY-02 | 4 | Pending |

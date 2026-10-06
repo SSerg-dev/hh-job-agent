@@ -34,11 +34,13 @@ export function createHandler(store: Store, options: { origin: string; dist: str
         return json(res, await importer.load(input?.url));
       }
       if (url.pathname === '/api/manual/letter' && req.method === 'POST') {
-        const input = await body(req) as { id?: unknown } | null;
+        const input = await body(req) as { id?: unknown; expectedLetter?: unknown } | null;
         if (!input || typeof input.id !== 'string') throw new HttpError(400, 'Укажите вакансию.');
         const entries = store.get<ManualEntry[]>('manual') ?? [];
         const entry = entries.find(e => e.id === input.id);
         if (!entry) throw new HttpError(404, 'Вакансия не найдена.');
+        if (typeof input.expectedLetter !== 'string') throw new HttpError(400, 'Передайте текущий сохранённый текст письма.');
+        if (entry.letter !== input.expectedLetter) throw new HttpError(409, 'Письмо изменилось в другой вкладке. Обновите страницу перед пересозданием.');
         Object.assign(entry, letterFor(entry.vacancy)); store.set('manual', entries);
         return json(res, { letter: entry.letter, letterInfo: entry.letterInfo });
       }

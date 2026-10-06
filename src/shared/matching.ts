@@ -17,6 +17,57 @@ function knownSkill(required: string, skills: string[]) {
   const key = (s: string) => aliases[norm(s)] ?? norm(s);
   return skills.some(s => key(s) === key(required));
 }
+function requirementSections(description: string) {
+  const optionalHeading = /^(?:будет плюсом|будет преимуществом|желательно|nice to have|preferred qualifications|optional skills)\s*:?(?:\s|$)/i;
+  const headings = '(?:будет плюсом|будет преимуществом|желательно|nice to have|preferred qualifications|optional skills|требования|что важно для этой роли|обязательно|requirements|must have|что предлагаем|что предстоит делать|чем предстоит заниматься|responsibilities|what we offer)';
+  const separated = description.replace(/<br\s*\/?\s*>|<\/(?:p|div|li|h[1-6])\s*>/gi, '\n').replace(new RegExp(`(^|[\n.!?]\\s*)(${headings}\\s*:)`, 'gi'), '$1\n$2');
+  const sections: { text: string; optional: boolean; required: boolean }[] = [];
+  let optional = false;
+  let mandatory = false;
+  for (const line of separated.split('\n')) {
+    const text = plainText(line).replace(/^[•*–-]\s*/, '');
+    if (!text) continue;
+    if (optionalHeading.test(text)) { optional = true; mandatory = false; }
+    else if (new RegExp(`^${headings}\\s*:?(?:\\s|$)`, 'i').test(text) || /^[^:]{1,100}:$/.test(text)) {
+      optional = false;
+      mandatory = /^(?:требования|что важно для этой роли|обязательно|requirements|must have)(?:\s|:|$)/i.test(text);
+    }
+    for (const clause of text.split(/(?<=[.!?;])\s+/)) {
+      const explicitlyRequired = /обязател|необходим|требуется|\b(?:must|mandatory|required)\b/i.test(clause);
+      sections.push({ text: clause, optional: optional && !explicitlyRequired, required: mandatory || explicitlyRequired });
+    }
+  }
+  return sections;
+}
+const languagePattern = /(?<![a-zа-я0-9])(?:C\+\+|C#|Csharp|Python|JavaScript|TypeScript|Java|Kotlin|Go|Rust|Ruby|PHP|Scala|Swift)(?![a-zа-я0-9])/gi;
+function languageAlternatives(requirements: { text: string; required?: boolean }[], skills: string[]) {
+  const occurrences: { name: string; covered: boolean; required: boolean }[] = [];
+  const satisfied: string[][] = [];
+  let ambiguous = false;
+  for (const requirement of requirements) {
+    const text = requirement.text;
+    const matches = [...text.matchAll(languagePattern)].filter(match => match[0].toLowerCase() !== 'go' || match[0] === 'Go');
+    if (matches.length >= 3 && /(?:\sили\s|\bor\b)/i.test(text) && /(?:\sи\s|\band\b)/i.test(text)) ambiguous = true;
+    let first = 0;
+    while (first < matches.length) {
+      let last = first;
+      while (last + 1 < matches.length && /^(?:\s|,|\/|или|or)*$/i.test(text.slice(matches[last].index! + matches[last][0].length, matches[last + 1].index))) last++;
+      const group = matches.slice(first, last + 1);
+      const start = group[0].index!; const end = group[group.length - 1].index! + group[group.length - 1][0].length;
+      const explicit = /(?:\sили\s|\bor\b)/i.test(text.slice(start, end)) || /(?:один|одного|любой|любом|любого)\s+из(?:\s+языков)?\s*:?\s*$/i.test(text.slice(0, start)) || /(?:one|any) of\s*:?\s*$/i.test(text.slice(0, start)) || /^\s+(?:или\s+друг|or\s+(?:another|other))/i.test(text.slice(end));
+      const covered = group.length >= 2 && explicit && !ambiguous && group.some(match => knownSkill(match[0], skills));
+      if (covered) satisfied.push(group.map(match => match[0]));
+      const required = requirement.required || matches.length >= 2 || /обязател|необходим|требуется|\b(?:must|mandatory|required)\b/i.test(text);
+      occurrences.push(...group.map(match => ({ name: match[0], covered, required })));
+      first = last + 1;
+    }
+  }
+  const waived = (skill: string) => {
+    const relevant = occurrences.filter(occurrence => knownSkill(skill, [occurrence.name]));
+    return relevant.length > 0 && relevant.every(occurrence => occurrence.covered);
+  };
+  return { occurrences, satisfied, waived, ambiguous };
+}
 function salaryLabel(salary: HHSalary | null | undefined): string {
   if (!salary) return 'Зарплата не указана';
   const fmt = (n: number) => new Intl.NumberFormat('ru-RU').format(n);
@@ -28,18 +79,28 @@ export function evaluateVacancy(v: Vacancy, profile: Profile): Match {
   const reject = (s: string) => { decision = 'rejected'; reasons.push(s); };
   const review = (s: string) => { if (decision !== 'rejected') decision = 'review'; reasons.push(s); };
   const text = plainText([v.name, v.description, v.snippet?.requirement, v.snippet?.responsibility, v.key_skills?.map(s => s.name).join(' ')].filter(Boolean).join(' '));
+  const sections = requirementSections(v.description ?? '');
+  const requiredDescription = sections.filter(section => !section.optional).map(section => section.text);
+  const requiredEvidence = [v.name, ...requiredDescription, v.snippet?.requirement ?? '', v.snippet?.responsibility ?? ''].join(' ');
+  const optionalText = sections.filter(section => section.optional).map(section => section.text).join(' ');
+  const optionalSkill = (skill: string) => mentions(optionalText, skill) && !mentions(requiredEvidence, skill);
+  const alternatives = languageAlternatives([{ text: v.name }, ...sections.filter(section => !section.optional), { text: v.snippet?.requirement ?? '', required: true }, { text: v.snippet?.responsibility ?? '' }], profile.skills);
+  const requiredSkills = (v.key_skills ?? []).map(skill => skill.name).filter(skill => !optionalSkill(skill) && !(alternatives.waived(skill) && !knownSkill(skill, profile.skills)));
+  const requiredText = [requiredEvidence, ...requiredSkills].join(' ');
+  if (alternatives.satisfied.length) reasons.push('Языковая альтернатива подтверждена одним из навыков профиля; остальные языки не считаются опытом кандидата.');
+  if (alternatives.ambiguous) review('Смешанные условия «и/или» для языков требуют ручной проверки.');
   if (/(?:tech[\s-]*lead|team[\s-]*lead|тим[\s-]*лид|тех[\s-]*лид|руководител|начальник|head of|chief|director|lead developer|lead engineer)/i.test(v.name)) reject('Руководящие и Tech Lead роли исключены.');
   if (/\bjunior\b|\bintern\b|стаж[её]р|младший/i.test(v.name)) reject('Начальный уровень не соответствует целевым Senior ролям.');
-  const dotnet = /\.net|\bc\s*#|\bdotnet\b/i.test(text);
-  const fullstack = /full[\s-]*stack|фул[л]?ст[еэ]к/i.test(v.name) && dotnet && /angular|vue/i.test(text);
+  const dotnet = /\.net|\bc\s*#|\bdotnet\b/i.test(requiredText);
+  const fullstack = /full[\s-]*stack|фул[л]?ст[еэ]к/i.test(v.name) && dotnet && /angular|vue/i.test(requiredText);
   const ai = /(?:\bai\b|\bllm\b|\brag\b|\bmcp\b|искусствен|нейросет|агент)/i.test(v.name) && /engineer|developer|инженер|разработчик/i.test(v.name);
   const backend = dotnet && /backend|back[\s-]*end|б[еэ]кенд|разработчик|developer|engineer/i.test(v.name) && !/front[\s-]*end|фронт[еэ]нд/i.test(v.name) && !/full[\s-]*stack|фул[л]?ст[еэ]к/i.test(v.name);
   if (!(profile.roles.includes('dotnet') && backend || profile.roles.includes('fullstack') && fullstack || profile.roles.includes('ai') && ai)) reject('Название и стек не подтверждают выбранные направления.');
   else reasons.push('Есть признаки выбранной инженерной специализации.');
-  if (ai && !/\b(?:rag|mcp|openai)\b|(?:llm|large language model).{0,80}(?:integrat|applicat|agent)|(?:интеграц|приложен|агент).{0,80}(?:llm|языков.*модел)/i.test(text)) review('Описание не подтверждает направление AI/LLM интеграций.');
+  if (ai && !/\b(?:rag|mcp|openai)\b|(?:llm|large language model).{0,80}(?:integrat|applicat|agent)|(?:интеграц|приложен|агент).{0,80}(?:llm|языков.*модел)/i.test(requiredText)) review('Описание не подтверждает направление AI/LLM интеграций.');
   if (ai) {
-    const missing = ['Python', 'PyTorch', 'TensorFlow'].filter(s => mentions(text, s) && !knownSkill(s, profile.skills));
-    if (missing.length || /model training|training models|fine[\s-]*tun|обучени[ея]\s+модел|computer vision/i.test(text)) review('Есть признаки ML/обучения моделей или неподтверждённого стека; требуется проверка.');
+    const missing = ['Python', 'PyTorch', 'TensorFlow'].filter(s => mentions(requiredText, s) && !knownSkill(s, profile.skills) && !alternatives.waived(s));
+    if (missing.length || /model training|training models|fine[\s-]*tun|обучени[ея]\s+модел|computer vision/i.test(requiredText)) review('Есть признаки ML/обучения моделей или неподтверждённого стека; требуется проверка.');
   }
   if (!ai && !/senior|старший|ведущий/i.test(v.name) && !['moreThan6', 'between3And6'].includes(v.experience?.id ?? '')) review('Senior уровень требует уточнения.');
   let formats = v.work_format?.map(f => f.id) ?? [];
@@ -63,13 +124,19 @@ export function evaluateVacancy(v: Vacancy, profile: Profile): Match {
   else if (salary.from != null && salary.to == null && salary.from < profile.minNetSalary) review('Нижняя граница ниже минимума; итоговую сумму нужно уточнить.');
   else review('Диапазон не гарантирует требуемую зарплату на руки.');
   const matchedSkills = profile.skills.filter(s => mentions(text, s));
-  const gaps = (v.key_skills ?? []).map(s => s.name).filter(s => !knownSkill(s, profile.skills));
+  const tagGaps = requiredSkills.filter(skill => !knownSkill(skill, profile.skills));
+  const languageGaps = alternatives.occurrences.filter(occurrence => occurrence.required).map(occurrence => occurrence.name).filter(skill => !knownSkill(skill, profile.skills) && !alternatives.waived(skill));
+  const uniqueSkills = (skills: string[]) => skills.filter((skill, index) => !knownSkill(skill, skills.slice(0, index)));
+  const gaps = uniqueSkills([...tagGaps, ...languageGaps]);
+  const optionalCandidates = [...(v.key_skills ?? []).map(skill => skill.name), ...[...optionalText.matchAll(languagePattern)].map(match => match[0]), 'PyTorch', 'TensorFlow'];
+  const optionalGaps = uniqueSkills(optionalCandidates.filter(skill => optionalSkill(skill) && !knownSkill(skill, profile.skills)));
+  if (optionalGaps.length) reasons.push('Необязательные навыки не подтверждены; это замечание, а не причина ручной проверки.');
   if (gaps.length) review('Часть заявленных навыков не подтверждена профилем.');
   const fullDetails = typeof v.description === 'string';
   if (!fullDetails) review('Для окончательной оценки нужно полное описание.');
   if (!matchedSkills.length) review('Нет подтверждённых совпадений навыков.');
   if (v.archived) reject('Вакансия в архиве.');
   if (v.has_test) review('Для отклика требуется тест HH.');
-  const required = v.key_skills?.length ?? 0;
-  return { decision, reasons, matchedSkills, gaps, coverage: required ? Math.round((required - gaps.length) / required * 100) : null, salaryLabel: salaryLabel(salary), formatLabel: formats.map(f => labels[f] ?? f).join(' / ') || 'Формат не уточнён', fullDetails };
+  const required = requiredSkills.length;
+  return { decision, reasons, matchedSkills, gaps, optionalGaps, coverage: required ? Math.round((required - tagGaps.length) / required * 100) : null, salaryLabel: salaryLabel(salary), formatLabel: formats.map(f => labels[f] ?? f).join(' / ') || 'Формат не уточнён', fullDetails };
 }
