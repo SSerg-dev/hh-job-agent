@@ -2,11 +2,11 @@
 gsd_state_version: "1.0"
 current_phase: 2
 current_phase_name: HH search and matching
-status: human_needed
-last_updated: "2026-10-06T18:01:13Z"
+status: paused
+last_updated: "2026-10-06T18:03:16Z"
 last_activity: 2026-10-06
-last_activity_desc: Local letter/catalog safety and required-stack fixes verified; 38 tests passed; formal phases remain open
-state_head: 4a424404cf90269bd5c22ee7e4166e7479584d4d
+last_activity_desc: End-of-day checkpoint after local workflow commit d5b0b45; 38 tests pass; formal acceptance pending
+state_head: d5b0b45975256caf51bb5416c8ccbcbbd587a9b1
 progress:
   total_phases: 5
   completed_phases: 1
@@ -36,6 +36,8 @@ See .planning/PROJECT.md (updated 2026-10-06).
 **Current focus:** Local manual workflow and document-grounded letters; Phase 2 live API search remains pending.
 
 ## Current Position
+
+Session paused for today per user instruction. Implementation committed as d5b0b45; canonical handoff: phases/02-hh-search-and-matching/.continue-here.md and HANDOFF.json. At 2026-10-06 21:03 Europe/Moscow, 12% five-hour and 60% weekly usage remained. Resets: 2026-10-06 22:48 and 2026-10-10 10:47 Europe/Moscow. User explicitly allowed consuming the usual reserve for this session only; that override ends with this pause. On resume, check usage again and apply the default 30% reserve unless explicitly changed. Do not confuse the paused session with successful Phase 2/3 acceptance.
 
 Phase: 2 of 5 (HH search and matching)
 Plan: 1 of 1 implemented; positive live validation pending

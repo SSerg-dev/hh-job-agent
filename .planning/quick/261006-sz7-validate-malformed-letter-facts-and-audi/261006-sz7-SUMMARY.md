@@ -15,3 +15,5 @@ Clarified UI attribution: sources describe the original generated draft and do n
 Agent UI check used a disposable database and a test server delaying saves by 15 seconds. During save, all four card action buttons and the editor were disabled. After completion controls recovered, the exact marker survived reload, and confirmed regeneration subsequently succeeded. Source-attribution disclaimer was visible. Test server stopped after verification; helper/database remain ignored under .runtime. No network import or personal cards were used.
 
 Final combined validation: 38 tests, typecheck and Vite build pass on bundled Node 24.19.0. This quick task does not close formal LETTER-01/02 acceptance or Phase 2 live search.
+
+Follow-up read-only SQLite audit: the personal database contains the same four fact records as the archive. All three source records match the generation-relevant id, filename, hash and text fields; the only differing metadata key is importedAt. Every database fact hash/quotation also matches its registered source. This audit did not regenerate or modify personal cards.
