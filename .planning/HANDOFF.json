@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "timestamp": "2026-10-06T18:03:16Z",
+  "timestamp": "2026-10-06T18:08:09Z",
   "phase": "2",
   "phase_name": "HH search and matching",
   "phase_dir": ".planning/phases/02-hh-search-and-matching",
@@ -32,7 +32,7 @@
   ],
   "uncommitted_files": ["?? .planning/debug/"],
   "uncommitted_snapshot_context": "Measured after implementation commit and before these checkpoint files were written; checkpoint files are committed separately. Debug content is unrelated and intentionally preserved.",
-  "usage_snapshot": { "five_hour_remaining_percent": 12, "weekly_remaining_percent": 60, "five_hour_reset_moscow": "2026-10-06 22:48", "weekly_reset_moscow": "2026-10-10 10:47", "default_reserve_percent_on_resume": 30 },
+  "usage_snapshot": { "five_hour_remaining_percent": 7, "weekly_remaining_percent": 59, "five_hour_reset_moscow": "2026-10-06 22:48", "weekly_reset_moscow": "2026-10-10 10:47", "default_reserve_percent_on_resume": 30 },
   "next_action": "Read usage and canonical handoff, obtain candidate letter acceptance, then reconcile formal Phase 3 without bypassing SEARCH-01",
-  "context_notes": "38 tests/typecheck/build passed. Isolated server stopped. Personal data unchanged. No submissions, agents, cloud deployment or push. Main server restart required to load committed changes."
+  "context_notes": "User requested at most ten more minutes for final shutdown on 2026-10-06. Repeated all 38 tests, typecheck/build, whitespace and handoff JSON checks successfully. No listeners on isolated port 4311; no tracked private data/.env/output files. Work completed before the timebox ended. No new implementation, submissions, agents, cloud deployment, push, credits, quota resets or model changes. Main server restart required to load committed changes. Next session must recheck usage and restore the usual reserve."
 }

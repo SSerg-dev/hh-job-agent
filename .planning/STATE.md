@@ -3,7 +3,7 @@ gsd_state_version: "1.0"
 current_phase: 2
 current_phase_name: HH search and matching
 status: paused
-last_updated: "2026-10-06T18:03:16Z"
+last_updated: "2026-10-06T18:08:09Z"
 last_activity: 2026-10-06
 last_activity_desc: End-of-day checkpoint after local workflow commit d5b0b45; 38 tests pass; formal acceptance pending
 state_head: d5b0b45975256caf51bb5416c8ccbcbbd587a9b1
@@ -36,6 +36,8 @@ See .planning/PROJECT.md (updated 2026-10-06).
 **Current focus:** Local manual workflow and document-grounded letters; Phase 2 live API search remains pending.
 
 ## Current Position
+
+Final shutdown check at 2026-10-06 21:08 Moscow: user allowed up to ten additional minutes only to finish cleanly. All 38 tests, typecheck/build, whitespace and handoff JSON checks passed again; isolated port 4311 has no listener. Latest remaining usage: 7% five-hour / 59% weekly; resets unchanged (today 22:48 / 2026-10-10 10:47 Moscow). No quota reset, credits, model change or new implementation. Session remains paused; resume only after a fresh usage reading and explicit continuation under the normal reserve policy. The earlier 12% reading below is historical.
 
 Session paused for today per user instruction. Implementation committed as d5b0b45; canonical handoff: phases/02-hh-search-and-matching/.continue-here.md and HANDOFF.json. At 2026-10-06 21:03 Europe/Moscow, 12% five-hour and 60% weekly usage remained. Resets: 2026-10-06 22:48 and 2026-10-10 10:47 Europe/Moscow. User explicitly allowed consuming the usual reserve for this session only; that override ends with this pause. On resume, check usage again and apply the default 30% reserve unless explicitly changed. Do not confuse the paused session with successful Phase 2/3 acceptance.
 
